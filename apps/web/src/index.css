@@ -1,0 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { @apply box-border; }
+  html { @apply bg-neutral-950 text-neutral-100 antialiased; }
+  body { @apply m-0 min-w-0 overflow-x-hidden bg-neutral-950; }
+  button, a, input { -webkit-tap-highlight-color: transparent; }
+  :focus-visible { @apply outline-none ring-2 ring-brita-500 ring-offset-2 ring-offset-neutral-950; }
+}
+
+@layer components {
+  .page-shell { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
+  .surface { @apply rounded-2xl border border-white/10 bg-neutral-900/80 shadow-xl backdrop-blur; }
+  .label { @apply mb-2 block text-sm font-semibold text-neutral-300; }
+  .field { @apply min-h-12 w-full rounded-xl border border-white/10 bg-neutral-950 px-4 py-3 text-base text-white placeholder:text-neutral-600 transition focus:border-brita-500; }
+}
+
+.noise {
+  background-image: radial-gradient(circle at 15% 15%, rgba(249,115,22,.14), transparent 28%), radial-gradient(circle at 85% 20%, rgba(249,115,22,.08), transparent 22%);
+}

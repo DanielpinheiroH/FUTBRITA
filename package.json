@@ -1,0 +1,20 @@
+{
+  "name": "fut-brita",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "concurrently -n api,web -c yellow,green \"npm run dev -w @fut-brita/api\" \"npm run dev -w @fut-brita/web\"",
+    "build": "npm run build -ws --if-present",
+    "test": "npm run test -ws --if-present",
+    "lint": "npm run lint -ws --if-present",
+    "typecheck": "npm run typecheck -ws --if-present",
+    "db:generate": "npm run db:generate -w @fut-brita/api",
+    "db:migrate": "npm run db:migrate -w @fut-brita/api",
+    "db:seed": "npm run db:seed -w @fut-brita/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "engines": { "node": ">=20" }
+}

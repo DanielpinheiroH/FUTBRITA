@@ -1,0 +1,5 @@
+import { LoaderCircle, Users } from 'lucide-react'
+
+export function Loading({ label = 'Carregando...' }: { label?: string }) { return <div className="flex min-h-48 flex-col items-center justify-center gap-3 text-neutral-400"><LoaderCircle className="animate-spin text-brita-500" /><span>{label}</span></div> }
+export function EmptyState({ title, description }: { title: string; description: string }) { return <div className="surface flex min-h-52 flex-col items-center justify-center px-6 text-center"><Users className="mb-4 size-10 text-neutral-600" /><h3 className="font-bold text-white">{title}</h3><p className="mt-2 max-w-sm text-sm text-neutral-400">{description}</p></div> }
+export function ErrorState({ message, retry }: { message: string; retry?: () => void }) { return <div role="alert" className="surface border-red-500/20 p-5 text-center"><p className="text-red-300">{message}</p>{retry && <button onClick={retry} className="mt-3 min-h-11 px-4 font-bold text-brita-400">Tentar novamente</button>}</div> }

@@ -1,0 +1,2 @@
+import { Link } from 'react-router-dom'
+export function NotFoundPage() { return <main className="grid min-h-svh place-items-center bg-neutral-950 p-5 text-center text-white"><div><p className="text-7xl font-black text-brita-500">404</p><h1 className="mt-4 text-2xl font-bold">Essa bola saiu pela lateral.</h1><Link to="/" className="mt-8 inline-flex min-h-12 items-center rounded-xl bg-brita-500 px-6 font-bold text-black">Voltar ao início</Link></div></main> }
