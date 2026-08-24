@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "test": "vitest run",
-    "test:integration": "vitest run tests/postgres.integration.test.ts",
+    "test:integration": "node scripts/run-integration.mjs",
     "lint": "eslint src tests prisma",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",

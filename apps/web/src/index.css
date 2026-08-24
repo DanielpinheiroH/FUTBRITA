@@ -16,6 +16,7 @@
   .surface { @apply rounded-2xl border border-white/10 bg-neutral-900/80 shadow-xl backdrop-blur; }
   .label { @apply mb-2 block text-sm font-semibold text-neutral-300; }
   .field { @apply min-h-12 w-full rounded-xl border border-white/10 bg-neutral-950 px-4 py-3 text-base text-white placeholder:text-neutral-600 transition focus:border-brita-500; }
+  .input { @apply min-h-12 w-full rounded-xl border border-white/10 bg-neutral-950 px-4 py-3 text-base text-white transition focus:border-brita-500; }
 }
 
 .noise {

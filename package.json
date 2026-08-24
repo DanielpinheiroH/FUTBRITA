@@ -7,6 +7,7 @@
     "dev": "concurrently -n api,web -c yellow,green \"npm run dev -w @fut-brita/api\" \"npm run dev -w @fut-brita/web\"",
     "build": "npm run build -ws --if-present",
     "test": "npm run test -ws --if-present",
+    "test:integration": "npm run test:integration -w @fut-brita/api",
     "lint": "npm run lint -ws --if-present",
     "typecheck": "npm run typecheck -ws --if-present",
     "db:generate": "npm run db:generate -w @fut-brita/api",

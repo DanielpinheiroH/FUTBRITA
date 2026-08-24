@@ -15,6 +15,9 @@ model Admin {
   ativo     Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  rodadasCriadas       Rodada[]    @relation("RodadaCriador")
+  pagamentosAtualizados Pagamento[] @relation("PagamentoAtualizador")
+  auditoriasJogo       AuditoriaJogo[]
 
   @@map("admins")
 }
@@ -27,8 +30,239 @@ model Jogador {
   ativo     Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  participacoes ParticipacaoRodada[]
 
   @@index([nome])
   @@index([apelido])
   @@map("jogadores")
+}
+
+enum StatusRodada {
+  PLANEJADA
+  PREPARACAO
+  EM_ANDAMENTO
+  ENCERRADA
+  CANCELADA
+}
+
+enum TipoParticipacao {
+  LINHA
+  GOLEIRO
+}
+
+enum StatusPagamento {
+  PENDENTE
+  PAGO
+}
+
+model Rodada {
+  id                 String       @id @default(uuid()) @db.Uuid
+  data               DateTime     @db.Date
+  horario            DateTime     @db.Time(0)
+  status             StatusRodada @default(PLANEJADA)
+  valorJogadorLinha  Decimal      @default(11.00) @map("valor_jogador_linha") @db.Decimal(10, 2)
+  createdBy          String       @map("created_by") @db.Uuid
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+  startedAt          DateTime?    @map("started_at")
+  endedAt            DateTime?    @map("ended_at")
+  criador            Admin        @relation("RodadaCriador", fields: [createdBy], references: [id], onDelete: Restrict)
+  participacoes      ParticipacaoRodada[]
+  estadoJogo         EstadoRodadaJogo?
+  ciclos             CicloRodada[]
+  permanencias       PermanenciaRodada[]
+  auditoriasJogo     AuditoriaJogo[]
+  partidas           Partida[]
+
+  @@index([data])
+  @@index([status])
+  @@index([status, data])
+  @@map("rodadas")
+}
+
+model ParticipacaoRodada {
+  id          String            @id @default(uuid()) @db.Uuid
+  rodadaId    String            @map("rodada_id") @db.Uuid
+  jogadorId   String            @map("jogador_id") @db.Uuid
+  tipo        TipoParticipacao
+  confirmado  Boolean           @default(true)
+  presente    Boolean           @default(false)
+  ordemChegada Int?             @map("ordem_chegada")
+  chegouEm    DateTime?         @map("chegou_em")
+  saiuEm      DateTime?         @map("saiu_em")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  rodada      Rodada            @relation(fields: [rodadaId], references: [id], onDelete: Cascade)
+  jogador     Jogador           @relation(fields: [jogadorId], references: [id], onDelete: Restrict)
+  pagamento   Pagamento?
+  escalacoes  EscalacaoCiclo[]
+  filas       FilaCiclo[]
+  permanencias PermanenciaRodada[]
+  gols        Gol[]
+
+  @@unique([rodadaId, jogadorId])
+  @@unique([rodadaId, ordemChegada])
+  @@index([rodadaId])
+  @@index([jogadorId])
+  @@map("participacoes_rodada")
+}
+
+enum LadoEquipe {
+  TIME_1
+  TIME_2
+}
+
+model EstadoRodadaJogo {
+  id          String   @id @default(uuid()) @db.Uuid
+  rodadaId    String   @unique @map("rodada_id") @db.Uuid
+  cicloAtual  Int      @default(1) @map("ciclo_atual")
+  versao      Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  rodada      Rodada   @relation(fields: [rodadaId], references: [id], onDelete: Cascade)
+
+  @@map("estados_rodada_jogo")
+}
+
+model CicloRodada {
+  id          String   @id @default(uuid()) @db.Uuid
+  rodadaId    String   @map("rodada_id") @db.Uuid
+  numero      Int
+  timeSaiu    LadoEquipe? @map("time_saiu")
+  createdAt   DateTime @default(now()) @map("created_at")
+  rodada      Rodada   @relation(fields: [rodadaId], references: [id], onDelete: Cascade)
+  escalacoes  EscalacaoCiclo[]
+  fila        FilaCiclo[]
+  partida     Partida?
+
+  @@unique([rodadaId, numero])
+  @@index([rodadaId])
+  @@map("ciclos_rodada")
+}
+
+enum StatusPartida {
+  AGUARDANDO
+  EM_ANDAMENTO
+  FINALIZADA
+  CANCELADA
+}
+
+enum ResultadoPartida {
+  TIME_1
+  TIME_2
+  EMPATE
+}
+
+model Partida {
+  id              String            @id @default(uuid()) @db.Uuid
+  rodadaId        String            @map("rodada_id") @db.Uuid
+  cicloId         String            @unique @map("ciclo_id") @db.Uuid
+  numero          Int
+  status          StatusPartida     @default(AGUARDANDO)
+  timePermanente  LadoEquipe        @map("time_permanente")
+  timeEntrante    LadoEquipe        @map("time_entrante")
+  placarTime1     Int               @default(0) @map("placar_time_1")
+  placarTime2     Int               @default(0) @map("placar_time_2")
+  resultado       ResultadoPartida?
+  timeVencedor    LadoEquipe?       @map("time_vencedor")
+  timeSaiu        LadoEquipe?       @map("time_que_saiu")
+  iniciadaEm      DateTime          @default(now()) @map("iniciada_em")
+  encerradaEm     DateTime?         @map("encerrada_em")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  rodada          Rodada            @relation(fields: [rodadaId], references: [id], onDelete: Cascade)
+  ciclo           CicloRodada       @relation(fields: [cicloId], references: [id], onDelete: Restrict)
+  gols            Gol[]
+
+  @@unique([rodadaId, numero])
+  @@index([rodadaId, status])
+  @@map("partidas")
+}
+
+model Gol {
+  id              String              @id @default(uuid()) @db.Uuid
+  partidaId       String              @map("partida_id") @db.Uuid
+  participacaoId  String              @map("participacao_id") @db.Uuid
+  lado            LadoEquipe
+  ordemEvento     Int                 @map("ordem_evento")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  partida         Partida             @relation(fields: [partidaId], references: [id], onDelete: Cascade)
+  participacao    ParticipacaoRodada  @relation(fields: [participacaoId], references: [id], onDelete: Restrict)
+
+  @@unique([partidaId, ordemEvento])
+  @@index([partidaId, lado])
+  @@index([participacaoId])
+  @@map("gols")
+}
+
+model EscalacaoCiclo {
+  id              String   @id @default(uuid()) @db.Uuid
+  cicloId         String   @map("ciclo_id") @db.Uuid
+  participacaoId  String   @map("participacao_id") @db.Uuid
+  lado            LadoEquipe
+  permaneceu      Boolean  @default(false)
+  ciclo           CicloRodada @relation(fields: [cicloId], references: [id], onDelete: Cascade)
+  participacao    ParticipacaoRodada @relation(fields: [participacaoId], references: [id], onDelete: Restrict)
+
+  @@unique([cicloId, participacaoId])
+  @@index([cicloId, lado])
+  @@index([participacaoId])
+  @@map("escalacoes_ciclo")
+}
+
+model FilaCiclo {
+  id              String   @id @default(uuid()) @db.Uuid
+  cicloId         String   @map("ciclo_id") @db.Uuid
+  participacaoId  String   @map("participacao_id") @db.Uuid
+  posicao         Int
+  ciclo           CicloRodada @relation(fields: [cicloId], references: [id], onDelete: Cascade)
+  participacao    ParticipacaoRodada @relation(fields: [participacaoId], references: [id], onDelete: Restrict)
+
+  @@unique([cicloId, participacaoId])
+  @@unique([cicloId, posicao])
+  @@map("filas_ciclo")
+}
+
+model PermanenciaRodada {
+  id                      String   @id @default(uuid()) @db.Uuid
+  rodadaId                String   @map("rodada_id") @db.Uuid
+  participacaoId          String   @map("participacao_id") @db.Uuid
+  quantidade              Int      @default(0)
+  ultimaPermanenciaCiclo  Int?     @map("ultima_permanencia_ciclo")
+  rodada                  Rodada   @relation(fields: [rodadaId], references: [id], onDelete: Cascade)
+  participacao            ParticipacaoRodada @relation(fields: [participacaoId], references: [id], onDelete: Restrict)
+
+  @@unique([rodadaId, participacaoId])
+  @@map("permanencias_rodada")
+}
+
+model AuditoriaJogo {
+  id          String   @id @default(uuid()) @db.Uuid
+  rodadaId    String   @map("rodada_id") @db.Uuid
+  adminId     String   @map("admin_id") @db.Uuid
+  acao        String   @db.VarChar(40)
+  detalhes    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  rodada      Rodada   @relation(fields: [rodadaId], references: [id], onDelete: Cascade)
+  admin       Admin    @relation(fields: [adminId], references: [id], onDelete: Restrict)
+
+  @@index([rodadaId, createdAt])
+  @@map("auditorias_jogo")
+}
+
+model Pagamento {
+  id              String            @id @default(uuid()) @db.Uuid
+  participacaoId  String            @unique @map("participacao_id") @db.Uuid
+  valor           Decimal           @db.Decimal(10, 2)
+  status          StatusPagamento   @default(PENDENTE)
+  pagoEm          DateTime?         @map("pago_em")
+  updatedBy       String            @map("updated_by") @db.Uuid
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  participacao    ParticipacaoRodada @relation(fields: [participacaoId], references: [id], onDelete: Cascade)
+  atualizador     Admin             @relation("PagamentoAtualizador", fields: [updatedBy], references: [id], onDelete: Restrict)
+
+  @@index([status])
+  @@map("pagamentos")
 }
