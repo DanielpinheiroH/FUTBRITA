@@ -8,14 +8,21 @@ import { AppError } from '../../shared/errors.js'
 export interface AuthRouteOptions {
   admins: AdminRepository
   sessions: SessionStore
-  cookieSecure: boolean
+  production: boolean
 }
 
 export async function authRoutes(app: FastifyInstance, options: AuthRouteOptions) {
   const service = new AuthService(options.admins)
-  const cookie = { path: '/', httpOnly: true, sameSite: 'lax' as const, secure: options.cookieSecure, signed: true, maxAge: 8 * 60 * 60 }
+  const cookie = {
+    path: '/',
+    httpOnly: true,
+    sameSite: options.production ? 'none' as const : 'lax' as const,
+    secure: options.production,
+    signed: true,
+    maxAge: 8 * 60 * 60,
+  }
 
-  app.post('/login', async (request, reply) => {
+  app.post('/login', { config: { rateLimit: { max: 5, timeWindow: '15 minutes' } } }, async (request, reply) => {
     const input = loginSchema.parse(request.body)
     const admin = await service.login(input.email, input.senha)
     const sessionId = options.sessions.create(admin.id)
@@ -26,7 +33,12 @@ export async function authRoutes(app: FastifyInstance, options: AuthRouteOptions
     const raw = request.cookies.fut_brita_session
     const sessionId = raw ? request.unsignCookie(raw).value ?? undefined : undefined
     options.sessions.delete(sessionId)
-    return reply.clearCookie('fut_brita_session', { path: '/' }).status(204).send()
+    return reply.clearCookie('fut_brita_session', {
+      path: '/',
+      httpOnly: true,
+      sameSite: options.production ? 'none' : 'lax',
+      secure: options.production,
+    }).status(204).send()
   })
 
   app.get('/me', async (request) => {

@@ -10,6 +10,7 @@ const prisma = new PrismaClient()
 const app = await buildApp(config, createPrismaDependencies(prisma))
 
 const shutdown = async () => {
+  app.log.info('Encerrando API com segurança')
   await app.close()
   await prisma.$disconnect()
 }

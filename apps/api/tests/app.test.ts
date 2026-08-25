@@ -45,6 +45,35 @@ describe('API Fut Brita', () => {
     const response = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'ADMIN@FUTBRITA.TEST', senha: password } })
     expect(response.statusCode).toBe(200); expect(response.cookies[0]?.name).toBe('fut_brita_session'); expect(response.json().admin.email).toBe('admin@futbrita.test')
   })
+  it('usa cookie cross-site seguro em produção', async () => {
+    await app.close()
+    const admins = new MemoryAdmins([{ id: randomUUID(), nome: 'Admin', email: 'admin@futbrita.test', senhaHash: await bcrypt.hash(password, 4), ativo: true }])
+    app = await buildApp(
+      { SESSION_SECRET: 'segredo-de-testes-com-mais-de-32-caracteres', NODE_ENV: 'production', WEB_ORIGIN: 'https://futbrita-api.vercel.app' },
+      { admins, jogadores, sessions: new SessionStore(), databaseCheck: async () => undefined },
+    )
+    const response = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'admin@futbrita.test', senha: password } })
+    const header = response.headers['set-cookie']
+    expect(header).toContain('HttpOnly')
+    expect(header).toContain('Secure')
+    expect(header).toContain('SameSite=None')
+  })
+  it('expõe CORS credenciado apenas para a origem configurada', async () => {
+    const allowed = await app.inject({ method: 'OPTIONS', url: '/api/auth/me', headers: { origin: 'http://localhost:5173', 'access-control-request-method': 'GET' } })
+    expect(allowed.headers['access-control-allow-origin']).toBe('http://localhost:5173')
+    expect(allowed.headers['access-control-allow-credentials']).toBe('true')
+    const denied = await app.inject({ method: 'OPTIONS', url: '/api/auth/me', headers: { origin: 'https://origem-invalida.example', 'access-control-request-method': 'GET' } })
+    expect(denied.statusCode).toBe(403)
+    expect(denied.headers['access-control-allow-origin']).toBeUndefined()
+  })
+  it('limita tentativas repetidas de login', async () => {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const response = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'admin@futbrita.test', senha: 'senha-incorreta' } })
+      expect(response.statusCode).toBe(401)
+    }
+    const blocked = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'admin@futbrita.test', senha: 'senha-incorreta' } })
+    expect(blocked.statusCode).toBe(429)
+  })
   it('rejeita login incorreto', async () => { const response = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'admin@futbrita.test', senha: 'errada' } }); expect(response.statusCode).toBe(401); expect(response.json().error).toBe('INVALID_CREDENTIALS') })
   it('protege rota administrativa sem login', async () => { const response = await app.inject({ method: 'GET', url: '/api/admin/jogadores' }); expect(response.statusCode).toBe(401) })
   it('encerra a sessão no logout', async () => { const cookie = await login(); const logout = await app.inject({ method: 'POST', url: '/api/auth/logout', headers: { cookie } }); expect(logout.statusCode).toBe(204); const denied = await app.inject({ method: 'GET', url: '/api/admin/jogadores', headers: { cookie } }); expect(denied.statusCode).toBe(401) })

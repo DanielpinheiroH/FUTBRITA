@@ -251,4 +251,26 @@ O motor e os desempates estão documentados em [docs/statistics-engine.md](docs/
 
 ## Fora do escopo atual
 
-Assistências, cartões, votação de MVP, notas, nível técnico, estatísticas de goleiro e balanceamento por habilidade permanecem fora do escopo. A Etapa 6 de acabamento, segurança e deploy não foi iniciada.
+Assistências, cartões, votação de MVP, notas, nível técnico, estatísticas de goleiro e balanceamento por habilidade permanecem fora do escopo.
+
+## Etapa 6 — produção real
+
+A arquitetura de produção preserva o frontend Vercel em `https://futbrita-api.vercel.app`, publica a API Fastify por Caddy em `https://futbrita.duckdns.org/api` e mantém PostgreSQL privado na VPS. O arquivo `docker-compose.prod.yml` contém somente os serviços FUTBRITA `api`, `postgres`, `caddy` e `backup`, com volumes persistentes, healthchecks e restart seguro.
+
+Principais garantias:
+
+- CORS credenciado para a origem oficial e cookie cross-site `HttpOnly`, `Secure`, `SameSite=None` em produção;
+- Helmet, rate limit de login e logs estruturados com campos sensíveis redigidos;
+- seed idempotente de dois administradores e `npm run admin:set-password -- --email EMAIL --password NOVA_SENHA`;
+- PWA instalável com logo oficial, cache somente de assets, favicon/apple icon e noindex;
+- backup `pg_dump -Fc` diário, sete diários, quatro semanais e restore testado somente em banco temporário;
+- pipeline de `main` com qualidade, PostgreSQL real, backup, `prisma migrate deploy` e health pós-deploy, sem remover volumes.
+
+Use `.env.production.example` somente como modelo. Os valores reais ficam em `.env.production`, ignorado pelo Git. Nunca execute `docker compose down -v` em produção.
+
+Documentação operacional:
+
+- [Produção](docs/production.md)
+- [Deploy](docs/deploy.md)
+- [Runbook](docs/runbook.md)
+- [Checklist](docs/production-checklist.md)

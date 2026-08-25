@@ -54,7 +54,7 @@ const report = []
 for (const viewport of viewports) {
   await send('Emulation.setDeviceMetricsOverride', { ...viewport, deviceScaleFactor: 1, screenWidth: viewport.width, screenHeight: viewport.height })
   const loaded = once('Page.loadEventFired')
-  await send('Page.navigate', { url: 'http://127.0.0.1:5173/' })
+  await send('Page.navigate', { url: 'http://localhost:5173/' })
   await loaded
   await new Promise((resolve) => setTimeout(resolve, 500))
   const metrics = await send('Runtime.evaluate', { expression: `({ innerWidth, innerHeight, scrollWidth: document.documentElement.scrollWidth, scrollHeight: document.documentElement.scrollHeight, title: document.title })`, returnByValue: true })

@@ -1,11 +1,14 @@
 import { spawnSync } from 'node:child_process'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import dotenv from 'dotenv'
 
 const rootEnv = fileURLToPath(new URL('../../../.env', import.meta.url))
 dotenv.config({ path: rootEnv, quiet: true })
 
-const vitest = fileURLToPath(new URL('../../../node_modules/vitest/vitest.mjs', import.meta.url))
+const require = createRequire(import.meta.url)
+const vitest = join(dirname(require.resolve('vitest/package.json')), 'vitest.mjs')
 const files = [
   'tests/postgres.integration.test.ts',
   'tests/rodadas.postgres.integration.test.ts',

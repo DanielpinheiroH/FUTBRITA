@@ -10,5 +10,5 @@
     "rootDir": ".",
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src", "tests", "prisma", "vitest.config.ts", "prisma.config.ts"]
+  "include": ["src", "tests", "prisma", "scripts", "vitest.config.ts", "prisma.config.ts"]
 }

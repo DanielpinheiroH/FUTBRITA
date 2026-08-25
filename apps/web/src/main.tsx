@@ -8,3 +8,7 @@ import './index.css'
 createRoot(document.getElementById('root')!).render(
   <StrictMode><BrowserRouter><AuthProvider><App /></AuthProvider></BrowserRouter></StrictMode>,
 )
+
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/service-worker.js').catch(() => undefined))
+}

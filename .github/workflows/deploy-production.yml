@@ -1,0 +1,70 @@
+name: Validate and deploy production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: futbrita-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: futbrita
+          POSTGRES_USER: futbrita
+          POSTGRES_PASSWORD: futbrita_ci
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U futbrita -d futbrita"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://futbrita:futbrita_ci@localhost:5433/futbrita?schema=public
+      SESSION_SECRET: ci-session-secret-with-at-least-32-characters
+      ADMIN_INITIAL_NAME: Administrador CI
+      ADMIN_INITIAL_EMAIL: admin-ci@futbrita.test
+      ADMIN_INITIAL_PASSWORD: SenhaCI123!
+      INTEGRATION_ADMIN_EMAIL: admin-ci@futbrita.test
+      INTEGRATION_ADMIN_PASSWORD: SenhaCI123!
+      NODE_ENV: test
+      WEB_ORIGIN: http://localhost:5173
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run db:migrate:deploy
+      - run: npm run db:seed
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run test:integration
+      - run: npm run build
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Configure SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "$VPS_PORT" "$VPS_HOST" >> ~/.ssh/known_hosts
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /opt/futbrita && sh scripts/deploy-production.sh'

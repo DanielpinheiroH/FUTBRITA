@@ -13,6 +13,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try { setAdmin((await api<{ admin: Admin }>('/auth/me')).admin) } catch { setAdmin(null) } finally { setLoading(false) }
   }, [])
   useEffect(() => { void refresh() }, [refresh])
+  useEffect(() => {
+    const clearExpiredSession = () => setAdmin(null)
+    window.addEventListener('futbrita:unauthorized', clearExpiredSession)
+    return () => window.removeEventListener('futbrita:unauthorized', clearExpiredSession)
+  }, [])
   const login = async (email: string, senha: string) => setAdmin((await api<{ admin: Admin }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, senha }) })).admin)
   const logout = async () => { await api('/auth/logout', { method: 'POST' }); setAdmin(null) }
   return <AuthContext.Provider value={{ admin, loading, login, logout }}>{children}</AuthContext.Provider>

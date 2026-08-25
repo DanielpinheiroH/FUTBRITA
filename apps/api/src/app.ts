@@ -1,6 +1,8 @@
 import Fastify from 'fastify'
 import cookie from '@fastify/cookie'
 import cors from '@fastify/cors'
+import helmet from '@fastify/helmet'
+import rateLimit from '@fastify/rate-limit'
 import { PrismaClient } from '@prisma/client'
 import type { AppConfig } from './config/env.js'
 import { PrismaAdminRepository, type AdminRepository } from './modules/admins/admin.repository.js'
@@ -8,7 +10,7 @@ import { PrismaJogadorRepository, type JogadorRepository } from './modules/jogad
 import { SessionStore } from './modules/auth/session.store.js'
 import { authRoutes } from './modules/auth/auth.routes.js'
 import { adminJogadorRoutes, publicJogadorRoutes } from './modules/jogadores/jogador.routes.js'
-import { registerErrorHandler } from './shared/errors.js'
+import { AppError, registerErrorHandler } from './shared/errors.js'
 import { PrismaRodadaRepository, type RodadaRepository } from './modules/rodadas/rodada.repository.js'
 import { adminRodadaRoutes, publicRodadaRoutes } from './modules/rodadas/rodada.routes.js'
 import { PrismaGameRepository, type GameRepository } from './modules/jogo/jogo.repository.js'
@@ -43,9 +45,22 @@ export function createPrismaDependencies(prisma: PrismaClient): AppDependencies 
 }
 
 export async function buildApp(config: Pick<AppConfig, 'SESSION_SECRET' | 'NODE_ENV' | 'WEB_ORIGIN'>, dependencies: AppDependencies) {
-  const app = Fastify({ logger: config.NODE_ENV !== 'test' })
-  await app.register(cors, { origin: config.WEB_ORIGIN, credentials: true })
+  const app = Fastify({
+    trustProxy: config.NODE_ENV === 'production',
+    logger: config.NODE_ENV === 'test' ? false : {
+      redact: ['req.headers.authorization', 'req.headers.cookie', 'res.headers.set-cookie', 'password', 'senha', '*.password', '*.senha'],
+    },
+  })
+  await app.register(helmet, { contentSecurityPolicy: false })
+  await app.register(cors, {
+    credentials: true,
+    origin(origin, callback) {
+      if (!origin || origin === config.WEB_ORIGIN) return callback(null, true)
+      return callback(new AppError(403, 'CORS_ORIGIN_DENIED', 'Origem não autorizada'), false)
+    },
+  })
   await app.register(cookie, { secret: config.SESSION_SECRET, hook: 'onRequest' })
+  await app.register(rateLimit, { global: false })
   registerErrorHandler(app)
   app.get('/api/health', async (_request, reply) => {
     try {
@@ -55,7 +70,7 @@ export async function buildApp(config: Pick<AppConfig, 'SESSION_SECRET' | 'NODE_
       return reply.status(503).send({ status: 'degraded', database: 'disconnected' })
     }
   })
-  await app.register(authRoutes, { prefix: '/api/auth', admins: dependencies.admins, sessions: dependencies.sessions, cookieSecure: config.NODE_ENV === 'production' })
+  await app.register(authRoutes, { prefix: '/api/auth', admins: dependencies.admins, sessions: dependencies.sessions, production: config.NODE_ENV === 'production' })
   await app.register(adminJogadorRoutes, { prefix: '/api/admin/jogadores', ...dependencies })
   await app.register(publicJogadorRoutes, { prefix: '/api/public/jogadores', jogadores: dependencies.jogadores })
   if (dependencies.rodadas) {

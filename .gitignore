@@ -7,3 +7,7 @@ coverage/
 *.tsbuildinfo
 .edge-test/
 .edge-cdp/
+backups/
+*.dump
+*.backup
+.env.production

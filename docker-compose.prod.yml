@@ -1,0 +1,82 @@
+name: futbrita
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: ${FUTBRITA_ENV_FILE:-.env.production}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks: [backend]
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file: ${FUTBRITA_ENV_FILE:-.env.production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose: ["3333"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3333/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    networks: [backend, proxy]
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    env_file: ${FUTBRITA_ENV_FILE:-.env.production}
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [proxy]
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: ${FUTBRITA_ENV_FILE:-.env.production}
+    environment:
+      POSTGRES_HOST: postgres
+      BACKUP_DIR: /backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["sh", "-c", "while true; do sh /scripts/backup-postgres.sh --once; sleep 86400; done"]
+    volumes:
+      - ./scripts:/scripts:ro
+      - postgres_backups:/backups
+    networks: [backend]
+
+networks:
+  backend:
+    internal: true
+  proxy:
+
+volumes:
+  postgres_data:
+    name: futbrita_postgres_data
+  postgres_backups:
+    name: futbrita_postgres_backups
+  caddy_data:
+    name: futbrita_caddy_data
+  caddy_config:
+    name: futbrita_caddy_config
