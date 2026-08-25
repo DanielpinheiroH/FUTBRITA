@@ -11,6 +11,7 @@ export interface JogadorEntity {
   nome: string
   apelido: string
   telefone: string
+  fotoUrl: string | null
   ativo: boolean
   createdAt: Date
   updatedAt: Date

@@ -1,8 +1,8 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
 import type { JogadorEntity } from '../../shared/entities.js'
 
-export interface JogadorCreateData { nome: string; apelido: string; telefone: string }
-export interface JogadorUpdateData { nome?: string; apelido?: string; telefone?: string; ativo?: boolean }
+export interface JogadorCreateData { nome: string; apelido: string; telefone: string; fotoUrl?: string | null }
+export interface JogadorUpdateData { nome?: string; apelido?: string; telefone?: string; fotoUrl?: string | null; ativo?: boolean }
 
 export interface JogadorRepository {
   list(search?: string, onlyActive?: boolean): Promise<JogadorEntity[]>

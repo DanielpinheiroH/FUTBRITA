@@ -46,23 +46,31 @@ describe.skipIf(!enabled)('Integração PostgreSQL real', () => {
     const cookie = login.cookies.map((item) => `${item.name}=${item.value}`).join('; ')
 
     const suffix = Date.now().toString()
+    const fotoUrl = 'data:image/webp;base64,aW50ZWdyYWNhbw=='
     const created = await app.inject({
       method: 'POST',
       url: '/api/admin/jogadores',
       headers: { cookie },
-      payload: { nome: `Integração PostgreSQL ${suffix}`, apelido: `PG${suffix}`, telefone: '(61) 99999-9999' },
+      payload: { nome: `Integração PostgreSQL ${suffix}`, apelido: `PG${suffix}`, telefone: '(61) 99999-9999', fotoUrl },
     })
     expect(created.statusCode).toBe(201)
     jogadorId = created.json().id
-    expect(created.json()).toMatchObject({ ativo: true, telefone: '61999999999' })
+    expect(created.json()).toMatchObject({ ativo: true, telefone: '61999999999', fotoUrl })
+    expect((await prisma.jogador.findUniqueOrThrow({ where: { id: jogadorId }, select: { fotoUrl: true } })).fotoUrl).toBe(fotoUrl)
 
     const listed = await app.inject({ method: 'GET', url: `/api/admin/jogadores?q=pg${suffix}`, headers: { cookie } })
     expect(listed.statusCode).toBe(200)
     expect(listed.json()).toHaveLength(1)
+    expect(listed.json()[0].fotoUrl).toBe(fotoUrl)
 
-    const edited = await app.inject({ method: 'PATCH', url: `/api/admin/jogadores/${jogadorId}`, headers: { cookie }, payload: { nome: `Integração editada ${suffix}` } })
+    const publicWithPhoto = await app.inject({ method: 'GET', url: `/api/public/jogadores/${jogadorId}` })
+    expect(publicWithPhoto.statusCode).toBe(200)
+    expect(publicWithPhoto.json().fotoUrl).toBe(fotoUrl)
+
+    const edited = await app.inject({ method: 'PATCH', url: `/api/admin/jogadores/${jogadorId}`, headers: { cookie }, payload: { nome: `Integração editada ${suffix}`, fotoUrl: null } })
     expect(edited.statusCode).toBe(200)
     expect(edited.json().nome).toBe(`Integração editada ${suffix}`)
+    expect(edited.json().fotoUrl).toBeNull()
 
     const publicBefore = await app.inject({ method: 'GET', url: `/api/public/jogadores/${jogadorId}` })
     expect(publicBefore.statusCode).toBe(200)

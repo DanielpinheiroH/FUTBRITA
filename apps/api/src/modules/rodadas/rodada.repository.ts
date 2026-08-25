@@ -25,7 +25,7 @@ export interface RodadaRecord {
     ordemChegada: number | null
     chegouEm: Date | null
     saiuEm: Date | null
-    jogador: { id: string; nome: string; apelido: string; telefone: string; ativo: boolean; createdAt: Date; updatedAt: Date }
+    jogador: { id: string; nome: string; apelido: string; telefone: string; fotoUrl: string | null; ativo: boolean; createdAt: Date; updatedAt: Date }
     pagamento: { id: string; valor: number; status: StatusPagamento; pagoEm: Date | null } | null
   }>
 }

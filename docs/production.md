@@ -24,7 +24,7 @@ Gere segredos na VPS com `openssl rand -base64 48`. Não cole o resultado em tic
 
 Em produção, `fut_brita_session` usa `HttpOnly`, `Secure`, `SameSite=None`, `Path=/`, assinatura e validade de oito horas. Em desenvolvimento, usa `SameSite=Lax` e não exige HTTPS. O frontend centraliza a API em `VITE_API_URL` e envia `credentials: include`.
 
-A API habilita Helmet, CORS credenciado para uma única origem, limite de cinco tentativas de login a cada 15 minutos e logs JSON com senha, autorização, cookies e `Set-Cookie` redigidos. O Caddy adiciona HSTS e remove o header `Server`.
+A API habilita Helmet, CORS credenciado para uma única origem, bloqueio após cinco senhas incorretas em 15 minutos por IP e e-mail, e logs JSON com senha, autorização, cookies e `Set-Cookie` redigidos. Logins corretos não consomem o limite e zeram falhas anteriores. O Caddy adiciona HSTS e remove o header `Server`.
 
 As sessões são mantidas em memória no único contêiner da API. Um restart invalida sessões administrativas existentes; isso é seguro e esperado nesta arquitetura sem Redis.
 

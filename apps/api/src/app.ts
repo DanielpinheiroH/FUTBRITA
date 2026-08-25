@@ -2,7 +2,6 @@ import Fastify from 'fastify'
 import cookie from '@fastify/cookie'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
-import rateLimit from '@fastify/rate-limit'
 import { PrismaClient } from '@prisma/client'
 import type { AppConfig } from './config/env.js'
 import { PrismaAdminRepository, type AdminRepository } from './modules/admins/admin.repository.js'
@@ -60,7 +59,6 @@ export async function buildApp(config: Pick<AppConfig, 'SESSION_SECRET' | 'NODE_
     },
   })
   await app.register(cookie, { secret: config.SESSION_SECRET, hook: 'onRequest' })
-  await app.register(rateLimit, { global: false })
   registerErrorHandler(app)
   app.get('/api/health', async (_request, reply) => {
     try {

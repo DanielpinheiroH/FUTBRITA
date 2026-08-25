@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fut-brita-static-v1'
+const CACHE_NAME = 'fut-brita-static-v2'
 const APP_SHELL = ['/', '/manifest.webmanifest', '/pwa-192.png', '/pwa-512.png', '/apple-touch-icon.png', '/favicon-32.png']
 
 self.addEventListener('install', (event) => {
@@ -21,7 +21,16 @@ self.addEventListener('fetch', (event) => {
   }
   if (!['style', 'script', 'image', 'font', 'manifest'].includes(request.destination)) return
   event.respondWith(caches.match(request).then((cached) => cached ?? fetch(request).then((response) => {
-    if (response.ok) void caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()))
+    if (response.ok) {
+      // Clone before returning the response to the browser. Waiting for the
+      // cache to open first can leave the original body already consumed.
+      const responseToCache = response.clone()
+      void caches
+        .open(CACHE_NAME)
+        .then((cache) => cache.put(request, responseToCache))
+        .catch(() => undefined)
+    }
+
     return response
   })))
 })

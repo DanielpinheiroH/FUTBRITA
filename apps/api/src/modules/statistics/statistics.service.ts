@@ -4,7 +4,7 @@ import { AppError } from '../../shared/errors.js'
 import type { StatisticsFilter, StatisticsRepository } from './statistics.repository.js'
 
 const filterDto = (filter: StatisticsFilter) => filter.roundId ? { scope: 'round' as const, roundId: filter.roundId } : filter.season ? { scope: 'season' as const, season: filter.season } : { scope: 'all' as const }
-export const metricsDto = (item: PlayerMetrics) => ({ jogador: { id: item.player.id, nome: item.player.nome, apelido: item.player.apelido, ativo: item.player.ativo }, partidas: item.games, vitorias: item.wins, empates: item.draws, derrotas: item.losses, gols: item.goals, mediaGols: item.goalAverage, pontos: item.points, aproveitamento: item.winRate, presencas: item.appearances, sequenciaAtual: item.currentStreak, maiorSequencia: item.bestStreak })
+export const metricsDto = (item: PlayerMetrics) => ({ jogador: { id: item.player.id, nome: item.player.nome, apelido: item.player.apelido, fotoUrl: item.player.fotoUrl ?? null, ativo: item.player.ativo }, partidas: item.games, vitorias: item.wins, empates: item.draws, derrotas: item.losses, gols: item.goals, mediaGols: item.goalAverage, pontos: item.points, aproveitamento: item.winRate, presencas: item.appearances, sequenciaAtual: item.currentStreak, maiorSequencia: item.bestStreak })
 
 export class StatisticsService {
   constructor(private readonly repository: StatisticsRepository) {}

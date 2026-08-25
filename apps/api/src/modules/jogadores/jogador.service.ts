@@ -24,8 +24,8 @@ export class JogadorService {
   }
 }
 
-export const publicDto = ({ id, nome, apelido, ativo }: JogadorEntity) => ({ id, nome, apelido, ativo })
+export const publicDto = ({ id, nome, apelido, fotoUrl, ativo }: JogadorEntity) => ({ id, nome, apelido, fotoUrl: fotoUrl ?? null, ativo })
 export const adminDto = (j: JogadorEntity) => ({
-  id: j.id, nome: j.nome, apelido: j.apelido, telefone: j.telefone, ativo: j.ativo,
+  id: j.id, nome: j.nome, apelido: j.apelido, telefone: j.telefone, fotoUrl: j.fotoUrl ?? null, ativo: j.ativo,
   createdAt: j.createdAt.toISOString(), updatedAt: j.updatedAt.toISOString(),
 })

@@ -7,6 +7,7 @@ import type { AdminRepository } from '../src/modules/admins/admin.repository.js'
 import type { JogadorCreateData, JogadorRepository, JogadorUpdateData } from '../src/modules/jogadores/jogador.repository.js'
 import { SessionStore } from '../src/modules/auth/session.store.js'
 import type { AdminEntity, JogadorEntity } from '../src/shared/entities.js'
+import type { JogadorCreateInput } from '@fut-brita/shared'
 
 class MemoryAdmins implements AdminRepository {
   constructor(public data: AdminEntity[]) {}
@@ -17,7 +18,7 @@ class MemoryJogadores implements JogadorRepository {
   data: JogadorEntity[] = []
   async list(search?: string, onlyActive = false) { const q = search?.toLowerCase(); return this.data.filter((p) => (!onlyActive || p.ativo) && (!q || p.nome.toLowerCase().includes(q) || p.apelido.toLowerCase().includes(q))) }
   async findById(id: string) { return this.data.find((p) => p.id === id) ?? null }
-  async create(input: JogadorCreateData) { const now = new Date(); const jogador = { id: randomUUID(), ...input, ativo: true, createdAt: now, updatedAt: now }; this.data.push(jogador); return jogador }
+  async create(input: JogadorCreateData) { const now = new Date(); const jogador = { id: randomUUID(), ...input, fotoUrl: input.fotoUrl ?? null, ativo: true, createdAt: now, updatedAt: now }; this.data.push(jogador); return jogador }
   async update(id: string, input: JogadorUpdateData) { const jogador = this.data.find((p) => p.id === id); if (!jogador) return null; Object.assign(jogador, input, { updatedAt: new Date() }); return jogador }
 }
 
@@ -37,7 +38,7 @@ describe('API Fut Brita', () => {
     const response = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'admin@futbrita.test', senha: password } })
     return response.cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join('; ')
   }
-  async function create(cookie: string, data = { nome: 'Daniel Pinheiro', apelido: 'Dani', telefone: '(61) 99999-9999' }) {
+  async function create(cookie: string, data: JogadorCreateInput = { nome: 'Daniel Pinheiro', apelido: 'Dani', telefone: '(61) 99999-9999' }) {
     return app.inject({ method: 'POST', url: '/api/admin/jogadores', headers: { cookie }, payload: data })
   }
 
@@ -73,11 +74,16 @@ describe('API Fut Brita', () => {
     }
     const blocked = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'admin@futbrita.test', senha: 'senha-incorreta' } })
     expect(blocked.statusCode).toBe(429)
+    expect(blocked.json().error).toBe('RATE_LIMITED')
+    expect(Number(blocked.headers['retry-after'])).toBeGreaterThan(0)
   })
+  it('não contabiliza logins corretos e limpa falhas anteriores', async () => { for (let attempt = 0; attempt < 4; attempt++) expect((await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'admin@futbrita.test', senha: 'incorreta' } })).statusCode).toBe(401); for (let loginAttempt = 0; loginAttempt < 7; loginAttempt++) expect((await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'admin@futbrita.test', senha: password } })).statusCode).toBe(200) })
   it('rejeita login incorreto', async () => { const response = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'admin@futbrita.test', senha: 'errada' } }); expect(response.statusCode).toBe(401); expect(response.json().error).toBe('INVALID_CREDENTIALS') })
   it('protege rota administrativa sem login', async () => { const response = await app.inject({ method: 'GET', url: '/api/admin/jogadores' }); expect(response.statusCode).toBe(401) })
   it('encerra a sessão no logout', async () => { const cookie = await login(); const logout = await app.inject({ method: 'POST', url: '/api/auth/logout', headers: { cookie } }); expect(logout.statusCode).toBe(204); const denied = await app.inject({ method: 'GET', url: '/api/admin/jogadores', headers: { cookie } }); expect(denied.statusCode).toBe(401) })
   it('cria jogador ativo e normaliza telefone', async () => { const response = await create(await login()); expect(response.statusCode).toBe(201); expect(response.json()).toMatchObject({ nome: 'Daniel Pinheiro', apelido: 'Dani', telefone: '61999999999', ativo: true }) })
+  it('cria, publica, atualiza e remove foto do jogador', async () => { const cookie = await login(); const fotoUrl = 'data:image/png;base64,aGVsbG8='; const created = await create(cookie, { nome: 'Daniel Pinheiro', apelido: 'Dani', telefone: '61999999999', fotoUrl }); expect(created.statusCode).toBe(201); expect(created.json().fotoUrl).toBe(fotoUrl); const publicList = await app.inject({ method: 'GET', url: '/api/public/jogadores' }); expect(publicList.json()[0].fotoUrl).toBe(fotoUrl); const removed = await app.inject({ method: 'PATCH', url: `/api/admin/jogadores/${created.json().id}`, headers: { cookie }, payload: { fotoUrl: null } }); expect(removed.statusCode).toBe(200); expect(removed.json().fotoUrl).toBeNull() })
+  it('rejeita foto fora do formato permitido', async () => { const response = await create(await login(), { nome: 'Daniel', apelido: 'Dani', telefone: '61999999999', fotoUrl: 'https://site-invalido.test/foto.jpg' }); expect(response.statusCode).toBe(400); expect(response.json().error).toBe('VALIDATION_ERROR') })
   it('lista e pesquisa jogadores sem diferenciar maiúsculas', async () => { const cookie = await login(); await create(cookie); await create(cookie, { nome: 'Carlos Silva', apelido: 'Kadu', telefone: '61988887777' }); const response = await app.inject({ method: 'GET', url: '/api/admin/jogadores?q=DAN', headers: { cookie } }); expect(response.statusCode).toBe(200); expect(response.json()).toHaveLength(1); expect(response.json()[0].apelido).toBe('Dani') })
   it('edita jogador', async () => { const cookie = await login(); const created = await create(cookie); const response = await app.inject({ method: 'PATCH', url: `/api/admin/jogadores/${created.json().id}`, headers: { cookie }, payload: { apelido: 'Brita' } }); expect(response.statusCode).toBe(200); expect(response.json().apelido).toBe('Brita') })
   it('inativa jogador sem excluí-lo', async () => { const cookie = await login(); const created = await create(cookie); const response = await app.inject({ method: 'PATCH', url: `/api/admin/jogadores/${created.json().id}`, headers: { cookie }, payload: { ativo: false } }); expect(response.statusCode).toBe(200); expect(response.json().ativo).toBe(false); expect(jogadores.data).toHaveLength(1) })

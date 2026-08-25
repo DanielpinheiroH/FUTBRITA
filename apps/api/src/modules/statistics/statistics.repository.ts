@@ -26,7 +26,7 @@ export class PrismaStatisticsRepository implements StatisticsRepository {
   async dataset(filter?: StatisticsFilter): Promise<StatisticsDataset> {
     const rodada = roundWhere(filter)
     const [players, matches, appearances] = await Promise.all([
-      this.prisma.jogador.findMany({ select: { id: true, nome: true, apelido: true, ativo: true } }),
+      this.prisma.jogador.findMany({ select: { id: true, nome: true, apelido: true, fotoUrl: true, ativo: true } }),
       this.prisma.partida.findMany({
         where: { status: StatusPartida.FINALIZADA, rodada },
         include: {

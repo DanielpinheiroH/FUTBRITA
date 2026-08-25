@@ -27,6 +27,7 @@ model Jogador {
   nome      String   @db.VarChar(120)
   apelido   String   @db.VarChar(60)
   telefone  String   @db.VarChar(13)
+  fotoUrl   String?  @map("foto_url") @db.Text
   ativo     Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

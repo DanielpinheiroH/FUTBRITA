@@ -2,7 +2,7 @@ export type StatisticSide = 'TIME_1' | 'TIME_2'
 export type StatisticResult = StatisticSide | 'EMPATE'
 export type RankingKind = 'goals' | 'wins' | 'winRate' | 'games' | 'appearances' | 'goalAverage' | 'streak'
 
-export interface StatisticPlayer { id: string; nome: string; apelido: string; ativo: boolean }
+export interface StatisticPlayer { id: string; nome: string; apelido: string; fotoUrl?: string | null; ativo: boolean }
 export interface StatisticAppearance { playerId: string; roundId: string; date: string }
 export interface StatisticMatch {
   id: string; roundId: string; date: string; number: number; result: StatisticResult; winner: StatisticSide | null

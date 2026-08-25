@@ -20,7 +20,7 @@ class MemoryJogadores implements JogadorRepository {
   data: JogadorEntity[] = []
   async list(search?: string, onlyActive = false) { const q = search?.toLowerCase(); return this.data.filter((p) => (!onlyActive || p.ativo) && (!q || p.nome.toLowerCase().includes(q) || p.apelido.toLowerCase().includes(q))) }
   async findById(id: string) { return this.data.find((p) => p.id === id) ?? null }
-  async create(input: JogadorCreateData) { const now = new Date(); const jogador = { id: randomUUID(), ...input, ativo: true, createdAt: now, updatedAt: now }; this.data.push(jogador); return jogador }
+  async create(input: JogadorCreateData) { const now = new Date(); const jogador = { id: randomUUID(), ...input, fotoUrl: input.fotoUrl ?? null, ativo: true, createdAt: now, updatedAt: now }; this.data.push(jogador); return jogador }
   async update(id: string, input: JogadorUpdateData) { const jogador = this.data.find((p) => p.id === id); if (!jogador) return null; Object.assign(jogador, input, { updatedAt: new Date() }); return jogador }
 }
 class MemoryRodadas implements RodadaRepository {

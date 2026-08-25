@@ -4,10 +4,16 @@ const telefone = z.string().trim().transform((value) => value.replace(/\D/g, '')
   z.string().regex(/^(?:55)?[1-9]{2}9?\d{8}$/, 'Telefone brasileiro inválido'),
 )
 
+export const MAX_PLAYER_PHOTO_DATA_URL_LENGTH = 600_000
+const fotoUrl = z.string()
+  .max(MAX_PLAYER_PHOTO_DATA_URL_LENGTH, 'A foto ficou muito grande')
+  .regex(/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/, 'Formato de foto inválido')
+
 export const jogadorCreateSchema = z.object({
   nome: z.string().trim().min(1, 'Nome é obrigatório').max(120),
   apelido: z.string().trim().min(1, 'Apelido é obrigatório').max(60),
   telefone,
+  fotoUrl: fotoUrl.nullable().optional(),
 })
 
 export const jogadorUpdateSchema = jogadorCreateSchema.partial().extend({ ativo: z.boolean().optional() })
@@ -24,6 +30,7 @@ export interface JogadorPublico {
   id: string
   nome: string
   apelido: string
+  fotoUrl: string | null
   ativo: boolean
 }
 
@@ -140,7 +147,7 @@ export interface ParticipacaoPublica {
   tipo: TipoParticipacao
   confirmado: boolean
   presente: boolean
-  jogador: Pick<JogadorPublico, 'id' | 'nome' | 'apelido'>
+  jogador: Pick<JogadorPublico, 'id' | 'nome' | 'apelido' | 'fotoUrl'>
 }
 
 export interface RodadaPublica {

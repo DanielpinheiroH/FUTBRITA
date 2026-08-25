@@ -4,6 +4,7 @@ import type { AdminRepository } from '../admins/admin.repository.js'
 import { AuthService } from './auth.service.js'
 import type { SessionStore } from './session.store.js'
 import { AppError } from '../../shared/errors.js'
+import { LoginAttemptLimiter } from './login-attempt-limiter.js'
 
 export interface AuthRouteOptions {
   admins: AdminRepository
@@ -13,6 +14,7 @@ export interface AuthRouteOptions {
 
 export async function authRoutes(app: FastifyInstance, options: AuthRouteOptions) {
   const service = new AuthService(options.admins)
+  const attempts = new LoginAttemptLimiter()
   const cookie = {
     path: '/',
     httpOnly: true,
@@ -22,9 +24,24 @@ export async function authRoutes(app: FastifyInstance, options: AuthRouteOptions
     maxAge: 8 * 60 * 60,
   }
 
-  app.post('/login', { config: { rateLimit: { max: 5, timeWindow: '15 minutes' } } }, async (request, reply) => {
+  app.post('/login', async (request, reply) => {
     const input = loginSchema.parse(request.body)
-    const admin = await service.login(input.email, input.senha)
+    const key = `${request.ip}:${input.email}`
+    const retryAfter = attempts.retryAfter(key)
+    if (retryAfter) {
+      return reply.header('Retry-After', String(retryAfter)).status(429).send({
+        error: 'RATE_LIMITED',
+        message: 'Muitas tentativas com senha incorreta. Aguarde e tente novamente.',
+      })
+    }
+    let admin
+    try {
+      admin = await service.login(input.email, input.senha)
+    } catch (error) {
+      if (error instanceof AppError && error.code === 'INVALID_CREDENTIALS') attempts.fail(key)
+      throw error
+    }
+    attempts.success(key)
     const sessionId = options.sessions.create(admin.id)
     return reply.setCookie('fut_brita_session', sessionId, cookie).send({ admin: { id: admin.id, nome: admin.nome, email: admin.email } })
   })

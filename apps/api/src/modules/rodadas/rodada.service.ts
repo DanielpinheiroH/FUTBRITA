@@ -73,7 +73,7 @@ export const rodadaPublicaDto = (rodada: RodadaRecord) => ({
     tipo: p.tipo,
     confirmado: p.confirmado,
     presente: p.presente,
-    jogador: { id: p.jogador.id, nome: p.jogador.nome, apelido: p.jogador.apelido },
+    jogador: { id: p.jogador.id, nome: p.jogador.nome, apelido: p.jogador.apelido, fotoUrl: p.jogador.fotoUrl },
   })),
 })
 
@@ -113,8 +113,8 @@ export class RodadaService {
   }
   async addJogadorRapido(id: string, input: unknown, adminId: string) {
     const data = jogadorRapidoSchema.parse(input)
-    const { nome, apelido, telefone, tipo, confirmado, presente } = data
-    return rodadaAdminDto(await this.rodadas.addJogadorRapido(id, { nome, apelido, telefone }, { tipo: tipo as TipoParticipacao, confirmado, presente }, adminId))
+    const { nome, apelido, telefone, fotoUrl, tipo, confirmado, presente } = data
+    return rodadaAdminDto(await this.rodadas.addJogadorRapido(id, { nome, apelido, telefone, fotoUrl }, { tipo: tipo as TipoParticipacao, confirmado, presente }, adminId))
   }
   async updateParticipacao(id: string, input: unknown, adminId: string) {
     const data = participacaoUpdateSchema.parse(input)
