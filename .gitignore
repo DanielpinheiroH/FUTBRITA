@@ -1,6 +1,9 @@
 node_modules/
 dist/
 .env
+.env.*
+!.env.example
+!.env.production.example
 *.log
 coverage/
 .vite/
@@ -8,6 +11,15 @@ coverage/
 .edge-test/
 .edge-cdp/
 backups/
+dumps/
+restore/
+secrets/
 *.dump
 *.backup
-.env.production
+*.restore
+*.sql.gz
+*.pem
+*.key
+*.ppk
+id_rsa*
+id_ed25519*
