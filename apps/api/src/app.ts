@@ -52,12 +52,13 @@ export async function buildApp(config: Pick<AppConfig, 'SESSION_SECRET' | 'NODE_
   })
   await app.register(helmet, { contentSecurityPolicy: false })
   await app.register(cors, {
-    credentials: true,
-    origin(origin, callback) {
-      if (!origin || origin === config.WEB_ORIGIN) return callback(null, true)
-      return callback(new AppError(403, 'CORS_ORIGIN_DENIED', 'Origem não autorizada'), false)
-    },
-  })
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  origin(origin, callback) {
+    if (!origin || origin === config.WEB_ORIGIN) return callback(null, true)
+    return callback(new AppError(403, 'CORS_ORIGIN_DENIED', 'Origem não autorizada'), false)
+  },
+})
   await app.register(cookie, { secret: config.SESSION_SECRET, hook: 'onRequest' })
   registerErrorHandler(app)
   app.get('/api/health', async (_request, reply) => {
