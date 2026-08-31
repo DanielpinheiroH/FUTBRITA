@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "npm run build -w @fut-brita/shared",
     "build": "tsc -b && vite build",
     "lint": "eslint src",
     "typecheck": "tsc -b --noEmit",
